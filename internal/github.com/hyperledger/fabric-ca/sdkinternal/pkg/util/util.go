@@ -22,20 +22,20 @@ package util
 
 import (
 	"bytes"
-	"crypto/ecdsa"
+	ecdsa "crypto/ecdsa"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	x509GM "github.com/Hyperledger-TWGC/tjfoc-gm/x509"
+	factory "github.com/hyperledger/fabric-sdk-go/internal/github.com/hyperledger/fabric-ca/sdkpatch/cryptosuitebridge"
+	"github.com/hyperledger/fabric-sdk-go/pkg/common/providers/core"
+	"github.com/tw-bc-group/net-go-gm/http"
 	"io/ioutil"
 	"math/big"
 	mrand "math/rand"
 
-	factory "github.com/hyperledger/fabric-sdk-go/internal/github.com/hyperledger/fabric-ca/sdkpatch/cryptosuitebridge"
-	"github.com/hyperledger/fabric-sdk-go/pkg/common/providers/core"
-
-	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -221,9 +221,12 @@ func GetX509CertificateFromPEM(cert []byte) (*x509.Certificate, error) {
 	if block == nil {
 		return nil, errors.New("Failed to PEM decode certificate")
 	}
-	x509Cert, err := x509.ParseCertificate(block.Bytes)
+	x509Cert, err := x509GM.ParseSm2CertifateToX509(block.Bytes)
 	if err != nil {
-		return nil, errors.Wrap(err, "Error parsing certificate")
+		x509Cert, err = x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return nil, errors.Wrap(err, "Error parsing certificate")
+		}
 	}
 	return x509Cert, nil
 }

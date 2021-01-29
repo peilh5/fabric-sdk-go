@@ -7,11 +7,13 @@ package mockfab
 import (
 	context "context"
 	tls "crypto/tls"
+	"github.com/Hyperledger-TWGC/tjfoc-gm/gmtls"
 	reflect "reflect"
 	time "time"
 
 	gomock "github.com/golang/mock/gomock"
 	fab "github.com/hyperledger/fabric-sdk-go/pkg/common/providers/fab"
+	tls1 "github.com/hyperledger/fabric-sdk-go/pkg/core/config/comm/gmtls"
 	tls0 "github.com/hyperledger/fabric-sdk-go/pkg/core/config/comm/tls"
 	metrics "github.com/hyperledger/fabric-sdk-go/pkg/fabsdk/metrics"
 )
@@ -354,4 +356,18 @@ func (m *MockProviders) LocalDiscoveryProvider() fab.LocalDiscoveryProvider {
 func (mr *MockProvidersMockRecorder) LocalDiscoveryProvider() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LocalDiscoveryProvider", reflect.TypeOf((*MockProviders)(nil).LocalDiscoveryProvider))
+}
+
+func (m *MockEndpointConfig) GMTLSCACertPool() tls1.CertPool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TLSCACertPool")
+	ret0, _ := ret[0].(tls1.CertPool)
+	return ret0
+}
+
+func (m *MockEndpointConfig) GMTLSClientCerts() []gmtls.Certificate {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GMTLSClientCerts")
+	ret0, _ := ret[0].([]gmtls.Certificate)
+	return ret0
 }

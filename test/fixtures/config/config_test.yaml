@@ -86,8 +86,8 @@ client:
     security:
      enabled: true
      default:
-      provider: "SW"
-     hashAlgorithm: "SHA2"
+      provider: "GM"
+     hashAlgorithm: "SM3"
      softVerify: true
      level: 256
 

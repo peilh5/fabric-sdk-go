@@ -18,6 +18,7 @@ import (
 	"github.com/hyperledger/fabric-sdk-go/pkg/common/providers/core"
 	"github.com/pkg/errors"
 
+	x509GM "github.com/Hyperledger-TWGC/tjfoc-gm/x509"
 	factory "github.com/hyperledger/fabric-sdk-go/internal/github.com/hyperledger/fabric-ca/sdkpatch/cryptosuitebridge"
 )
 
@@ -57,9 +58,15 @@ func GetPublicKeyFromCert(cert []byte, cs core.CryptoSuite) (core.Key, error) {
 		return nil, errors.Errorf("Unable to decode cert bytes [%v]", cert)
 	}
 
-	x509Cert, err := x509.ParseCertificate(dcert.Bytes)
+	var x509Cert interface{}
+
+	x509Cert, err := x509GM.ParseCertificate(dcert.Bytes)
+
 	if err != nil {
-		return nil, errors.Errorf("Unable to parse cert from decoded bytes: %s", err)
+		x509Cert, err = x509.ParseCertificate(dcert.Bytes)
+		if err != nil {
+			return nil, errors.Errorf("Unable to parse cert from decoded bytes: %s", err)
+		}
 	}
 
 	// get the public key in the right format

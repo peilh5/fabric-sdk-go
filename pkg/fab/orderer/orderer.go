@@ -16,7 +16,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cast"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
 	grpcstatus "google.golang.org/grpc/status"
 
@@ -27,8 +26,8 @@ import (
 	"github.com/hyperledger/fabric-sdk-go/pkg/common/logging"
 	"github.com/hyperledger/fabric-sdk-go/pkg/common/providers/fab"
 	"github.com/hyperledger/fabric-sdk-go/pkg/context"
-	"github.com/hyperledger/fabric-sdk-go/pkg/core/config/comm"
 	"github.com/hyperledger/fabric-sdk-go/pkg/core/config/endpoint"
+	fabCommon "github.com/hyperledger/fabric-sdk-go/pkg/fab/common"
 )
 
 var logger = logging.NewLogger("fabsdk/fab")
@@ -76,16 +75,11 @@ func New(config fab.EndpointConfig, opts ...Option) (*Orderer, error) {
 	}
 	grpcOpts = append(grpcOpts, grpc.WithDefaultCallOptions(grpc.WaitForReady(!orderer.failFast)))
 	if endpoint.AttemptSecured(orderer.url, orderer.allowInsecure) {
-		//tls config
-		tlsConfig, err := comm.TLSConfig(orderer.tlsCACert, orderer.serverName, config)
+		grpcOpt, err := fabCommon.ConfigTLS(orderer.tlsCACert, orderer.serverName, config)
 		if err != nil {
 			return nil, err
 		}
-		tlsConfig.VerifyPeerCertificate = func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
-			return verifier.VerifyPeerCertificate(rawCerts, verifiedChains)
-		}
-
-		grpcOpts = append(grpcOpts, grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)))
+		grpcOpts = append(grpcOpts, grpcOpt)
 	} else {
 		grpcOpts = append(grpcOpts, grpc.WithInsecure())
 	}

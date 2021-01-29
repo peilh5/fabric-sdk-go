@@ -8,6 +8,7 @@ package mocks
 
 import (
 	"crypto/tls"
+	"github.com/Hyperledger-TWGC/tjfoc-gm/gmtls"
 	"path/filepath"
 	"time"
 
@@ -17,9 +18,11 @@ import (
 
 	"crypto/x509"
 
+	x509GM "github.com/Hyperledger-TWGC/tjfoc-gm/x509"
 	"github.com/hyperledger/fabric-sdk-go/pkg/common/providers/fab"
 	"github.com/hyperledger/fabric-sdk-go/pkg/common/providers/msp"
 	"github.com/hyperledger/fabric-sdk-go/pkg/common/providers/test/mockfab"
+	commgmtls "github.com/hyperledger/fabric-sdk-go/pkg/core/config/comm/gmtls"
 	commtls "github.com/hyperledger/fabric-sdk-go/pkg/core/config/comm/tls"
 	"github.com/pkg/errors"
 )
@@ -34,7 +37,12 @@ type MockConfig struct {
 	customOrdererCfg       *fab.OrdererConfig
 	customRandomOrdererCfg *fab.OrdererConfig
 	CustomTLSCACertPool    commtls.CertPool
+	CustomGMTLSCACertPool  commgmtls.CertPool
 	chConfig               map[string]*fab.ChannelEndpointConfig
+}
+
+func (c *MockConfig) GMTLSClientCerts() []gmtls.Certificate {
+	panic("implement me")
 }
 
 func getConfigPath() string {
@@ -157,6 +165,15 @@ func (c *MockConfig) TLSCACertPool() commtls.CertPool {
 		return c.CustomTLSCACertPool
 	}
 	return &mockfab.MockCertPool{CertPool: x509.NewCertPool()}
+}
+
+func (c *MockConfig) GMTLSCACertPool() commgmtls.CertPool {
+	if c.errorCase {
+		return &mockfab.MockGMCertPool{Err: errors.New("just to test error scenario")}
+	} else if c.CustomTLSCACertPool != nil {
+		return c.CustomGMTLSCACertPool
+	}
+	return &mockfab.MockGMCertPool{CertPool: x509GM.NewCertPool()}
 }
 
 // TcertBatchSize ...

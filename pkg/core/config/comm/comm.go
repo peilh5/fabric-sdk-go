@@ -8,6 +8,8 @@ package comm
 
 import (
 	"crypto/tls"
+	"github.com/Hyperledger-TWGC/tjfoc-gm/gmtls"
+	x509GM "github.com/Hyperledger-TWGC/tjfoc-gm/x509"
 
 	"crypto/x509"
 
@@ -33,12 +35,23 @@ func TLSConfig(cert *x509.Certificate, serverName string, config fab.EndpointCon
 
 // TLSCertHash is a utility method to calculate the SHA256 hash of the configured certificate (for usage in channel headers)
 func TLSCertHash(config fab.EndpointConfig) ([]byte, error) {
-	certs := config.TLSClientCerts()
-	if len(certs) == 0 {
-		return computeHash([]byte(""))
+	gmCerts := config.GMTLSClientCerts()
+
+	if len(gmCerts) == 0 {
+		certs := config.TLSClientCerts()
+		if len(certs) == 0 {
+			return computeHash([]byte(""))
+		}
+
+		cert := certs[0]
+		if len(cert.Certificate) == 0 {
+			return computeHash([]byte(""))
+		}
+
+		return computeHash(cert.Certificate[0])
 	}
 
-	cert := certs[0]
+	cert := gmCerts[0]
 	if len(cert.Certificate) == 0 {
 		return computeHash([]byte(""))
 	}
@@ -53,4 +66,19 @@ func computeHash(msg []byte) ([]byte, error) {
 		return nil, errors.WithMessage(err, "failed to compute tls cert hash")
 	}
 	return h, err
+}
+
+// GM support
+func GMTLSConfig(cert *x509.Certificate, serverName string, config fab.EndpointConfig) (*gmtls.Config, error) {
+	if cert != nil {
+		gmCert := &x509GM.Certificate{}
+		gmCert.FromX509Certificate(cert)
+		config.GMTLSCACertPool().Add(gmCert)
+	}
+
+	certPool, err := config.GMTLSCACertPool().Get()
+	if err != nil {
+		return nil, err
+	}
+	return &gmtls.Config{GMSupport: &gmtls.GMSupport{}, RootCAs: certPool, Certificates: config.GMTLSClientCerts(), ServerName: serverName}, nil
 }

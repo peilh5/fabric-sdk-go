@@ -9,12 +9,15 @@ package fab
 import (
 	"crypto/tls"
 	"crypto/x509"
+	x509GM "github.com/Hyperledger-TWGC/tjfoc-gm/x509"
+	commgmtls "github.com/hyperledger/fabric-sdk-go/pkg/core/config/comm/gmtls"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/Hyperledger-TWGC/tjfoc-gm/gmtls"
 	"github.com/hyperledger/fabric-sdk-go/pkg/common/errors/multi"
 	"github.com/hyperledger/fabric-sdk-go/pkg/common/errors/retry"
 	"github.com/hyperledger/fabric-sdk-go/pkg/common/errors/status"
@@ -145,6 +148,7 @@ type EndpointConfig struct {
 	backend                  *lookup.ConfigLookup
 	networkConfig            *fab.NetworkConfig
 	tlsCertPool              commtls.CertPool
+	gmtlsCertPool            commgmtls.CertPool
 	entityMatchers           *entityMatchers
 	peerConfigsByOrg         map[string][]fab.PeerConfig
 	networkPeers             []fab.NetworkPeer
@@ -152,6 +156,7 @@ type EndpointConfig struct {
 	channelPeersByChannel    map[string][]fab.ChannelPeer
 	channelOrderersByChannel map[string][]fab.OrdererConfig
 	tlsClientCerts           []tls.Certificate
+	gmtlsClientCerts         []gmtls.Certificate
 	peerMatchers             []matcherEntry
 	ordererMatchers          []matcherEntry
 	channelMatchers          []matcherEntry
@@ -159,6 +164,14 @@ type EndpointConfig struct {
 	defaultOrdererConfig     fab.OrdererConfig
 	defaultChannelPolicies   fab.ChannelPolicies
 	defaultChannel           *fab.ChannelEndpointConfig
+}
+
+func (c *EndpointConfig) GMTLSCACertPool() commgmtls.CertPool {
+	return c.gmtlsCertPool
+}
+
+func (c *EndpointConfig) GMTLSClientCerts() []gmtls.Certificate {
+	return c.gmtlsClientCerts
 }
 
 //endpointConfigEntity contains endpoint config elements needed by endpointconfig
@@ -293,6 +306,19 @@ func (c *EndpointConfig) TLSCACertPool() commtls.CertPool {
 // TLSClientCerts loads the client's certs for mutual TLS
 func (c *EndpointConfig) TLSClientCerts() []tls.Certificate {
 	return c.tlsClientCerts
+}
+
+func (c *EndpointConfig) loadGMPrivateKeyFromConfig(clientConfig *ClientConfig, clientCerts gmtls.Certificate, cb []byte) ([]gmtls.Certificate, error) {
+	kb := clientConfig.TLSCerts.Client.Key.Bytes()
+
+	clientCerts, err := gmtls.X509KeyPair(cb, kb)
+	if err != nil {
+		return nil, errors.Errorf("Error loading gm cert/key pair as TLS client credentials: %s", err)
+	}
+
+	logger.Debug("pk read from config successfully")
+
+	return []gmtls.Certificate{clientCerts}, nil
 }
 
 func (c *EndpointConfig) loadPrivateKeyFromConfig(clientConfig *ClientConfig, clientCerts tls.Certificate, cb []byte) ([]tls.Certificate, error) {
@@ -1151,7 +1177,6 @@ func (c *EndpointConfig) loadAllTLSConfig(configEntity *endpointConfigEntity) er
 	if err != nil {
 		return errors.WithMessage(err, "failed to load TLS client certs ")
 	}
-
 	return nil
 }
 
@@ -1366,24 +1391,39 @@ func (c *EndpointConfig) loadChannelOrderers() error {
 func (c *EndpointConfig) loadTLSCertPool() error {
 
 	var err error
-	c.tlsCertPool, err = commtls.NewCertPool(c.backend.GetBool("client.tlsCerts.systemCertPool"))
+	c.gmtlsCertPool, err = commgmtls.NewCertPool(c.backend.GetBool("client.tlsCerts.systemCertPool"))
+	if err != nil {
+		c.tlsCertPool, err = commtls.NewCertPool(c.backend.GetBool("client.tlsCerts.systemCertPool"))
+	}
 	if err != nil {
 		return errors.WithMessage(err, "failed to create cert pool")
 	}
 
-	// preemptively add all TLS certs to cert pool as adding them at request time
-	// is expensive
-	certs, err := c.loadTLSCerts()
+	certs, err := c.loadGMTLSCerts()
+
 	if err != nil {
-		logger.Infof("could not cache TLS certs: %s", err)
+		// preemptively add all TLS certs to cert pool as adding them at request time
+		// is expensive
+		certs, err := c.loadTLSCerts()
+		if err != nil {
+			logger.Infof("could not cache TLS certs: %s", err)
+		}
+		//add certs to cert pool
+		c.tlsCertPool.Add(certs...)
+
+		//update cetr pool
+		if _, err := c.tlsCertPool.Get(); err != nil {
+			return errors.WithMessage(err, "cert pool load failed")
+		}
+	} else {
+		c.gmtlsCertPool.Add(certs...)
+
+		//update cetr pool
+		if _, err := c.gmtlsCertPool.Get(); err != nil {
+			return errors.WithMessage(err, "cert pool load failed")
+		}
 	}
 
-	//add certs to cert pool
-	c.tlsCertPool.Add(certs...)
-	//update cetr pool
-	if _, err := c.tlsCertPool.Get(); err != nil {
-		return errors.WithMessage(err, "cert pool load failed")
-	}
 	return nil
 }
 
@@ -1392,6 +1432,7 @@ func (c *EndpointConfig) loadTLSCertPool() error {
 func (c *EndpointConfig) loadTLSClientCerts(configEntity *endpointConfigEntity) error {
 
 	var clientCerts tls.Certificate
+	var gmClientCerts gmtls.Certificate
 	cb := configEntity.Client.TLSCerts.Client.Cert.Bytes()
 	if len(cb) == 0 {
 		// if no cert found in the config, empty cert chain should be used
@@ -1402,15 +1443,19 @@ func (c *EndpointConfig) loadTLSClientCerts(configEntity *endpointConfigEntity) 
 	// Load private key from cert using default crypto suite
 	cs := cryptosuite.GetDefault()
 	pk, err := cryptoutil.GetPrivateKeyFromCert(cb, cs)
-
 	// If CryptoSuite fails to load private key from cert then load private key from config
 	if err != nil || pk == nil {
 		logger.Debugf("Reading pk from config, unable to retrieve from cert: %s", err)
-		tlsClientCerts, error := c.loadPrivateKeyFromConfig(&configEntity.Client, clientCerts, cb)
-		if error != nil {
-			return errors.WithMessage(error, "failed to load TLS client certs")
+		gmtlsClientCerts, err := c.loadGMPrivateKeyFromConfig(&configEntity.Client, gmClientCerts, cb)
+		if err != nil {
+			tlsClientCerts, err := c.loadPrivateKeyFromConfig(&configEntity.Client, clientCerts, cb)
+			if err != nil {
+				return errors.WithMessage(err, "failed to load TLS client certs")
+			}
+			c.tlsClientCerts = tlsClientCerts
+			return nil
 		}
-		c.tlsClientCerts = tlsClientCerts
+		c.gmtlsClientCerts = gmtlsClientCerts
 		return nil
 	}
 
@@ -1419,7 +1464,6 @@ func (c *EndpointConfig) loadTLSClientCerts(configEntity *endpointConfigEntity) 
 	if err != nil {
 		return errors.WithMessage(err, "failed to load TLS client certs, failed to get X509KeyPair")
 	}
-
 	c.tlsClientCerts = []tls.Certificate{clientCerts}
 	return nil
 }
@@ -1712,6 +1756,27 @@ func (c *EndpointConfig) verifyPeerConfig(p *fab.PeerConfig, peerName string, tl
 		return errors.Errorf("tls.certificate does not exist or empty for peer %s", peerName)
 	}
 	return nil
+}
+
+func (c *EndpointConfig) loadGMTLSCerts() ([]*x509GM.Certificate, error) {
+	var certs []*x509GM.Certificate
+	errs := multi.Errors{}
+
+	for _, peer := range c.networkPeers {
+		if peer.TLSCACert != nil {
+			gmCert := &x509GM.Certificate{}
+			gmCert.FromX509Certificate(peer.TLSCACert)
+			certs = append(certs, gmCert)
+		}
+	}
+	for _, orderer := range c.ordererConfigs {
+		if orderer.TLSCACert != nil {
+			gmCert := &x509GM.Certificate{}
+			gmCert.FromX509Certificate(orderer.TLSCACert)
+			certs = append(certs, gmCert)
+		}
+	}
+	return certs, errs.ToError()
 }
 
 func (c *EndpointConfig) loadTLSCerts() ([]*x509.Certificate, error) {

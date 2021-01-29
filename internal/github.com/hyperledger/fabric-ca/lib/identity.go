@@ -13,7 +13,6 @@ package lib
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"strconv"
 
 	"github.com/hyperledger/fabric-sdk-go/internal/github.com/hyperledger/fabric-ca/lib/client/credential"
@@ -22,6 +21,7 @@ import (
 	"github.com/hyperledger/fabric-sdk-go/internal/github.com/hyperledger/fabric-ca/sdkinternal/pkg/util"
 	log "github.com/hyperledger/fabric-sdk-go/internal/github.com/hyperledger/fabric-ca/sdkpatch/logbridge"
 	"github.com/pkg/errors"
+	"github.com/tw-bc-group/net-go-gm/http"
 )
 
 // Identity is fabric-ca's implementation of an identity

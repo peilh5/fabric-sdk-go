@@ -19,6 +19,7 @@ import (
 	"reflect"
 	"time"
 
+	x509GM "github.com/Hyperledger-TWGC/tjfoc-gm/x509"
 	"github.com/pkg/errors"
 )
 
@@ -54,6 +55,23 @@ func (msp *bccspmsp) validateIdentity(id *identity) error {
 	return nil
 }
 
+func (msp *bccspmsp) validateGMCAIdentity(id *identity) error {
+	if !id.cert.IsCA {
+		return errors.New("Only CA identities can be validated")
+	}
+
+	validationChain, err := msp.getGMUniqueValidationChain(id.cert, msp.getValidityOptsForGMCert(id.cert))
+	if err != nil {
+		return errors.WithMessage(err, "could not obtain gm certification chain")
+	}
+	if len(validationChain) == 1 {
+		// validationChain[0] is the root CA certificate
+		return nil
+	}
+
+	return msp.validateIdentityAgainstChain(id, validationChain)
+}
+
 func (msp *bccspmsp) validateCAIdentity(id *identity) error {
 	if !id.cert.IsCA {
 		return errors.New("Only CA identities can be validated")
@@ -69,6 +87,23 @@ func (msp *bccspmsp) validateCAIdentity(id *identity) error {
 	}
 
 	return msp.validateIdentityAgainstChain(id, validationChain)
+}
+
+func (msp *bccspmsp) validateGMTLSCAIdentity(cert *x509.Certificate, opts *x509GM.VerifyOptions) error {
+	if !cert.IsCA {
+		return errors.New("Only CA identities can be validated")
+	}
+
+	validationChain, err := msp.getGMUniqueValidationChain(cert, *opts)
+	if err != nil {
+		return errors.WithMessage(err, "could not obtain certification chain")
+	}
+	if len(validationChain) == 1 {
+		// validationChain[0] is the root CA certificate
+		return nil
+	}
+
+	return msp.validateCertAgainstChain(cert, validationChain)
 }
 
 func (msp *bccspmsp) validateTLSCAIdentity(cert *x509.Certificate, opts *x509.VerifyOptions) error {
@@ -285,6 +320,22 @@ func (msp *bccspmsp) getValidityOptsForCert(cert *x509.Certificate) x509.VerifyO
 	tempOpts.DNSName = msp.opts.DNSName
 	tempOpts.Intermediates = msp.opts.Intermediates
 	tempOpts.KeyUsages = msp.opts.KeyUsages
+	tempOpts.CurrentTime = cert.NotBefore.Add(time.Second)
+
+	return tempOpts
+}
+
+func (msp *bccspmsp) getValidityOptsForGMCert(cert *x509.Certificate) x509GM.VerifyOptions {
+	// First copy the opts to override the CurrentTime field
+	// in order to make the certificate passing the expiration test
+	// independently from the real local current time.
+	// This is a temporary workaround for FAB-3678
+
+	var tempOpts x509GM.VerifyOptions
+	tempOpts.Roots = msp.gmopts.Roots
+	tempOpts.DNSName = msp.gmopts.DNSName
+	tempOpts.Intermediates = msp.gmopts.Intermediates
+	tempOpts.KeyUsages = msp.gmopts.KeyUsages
 	tempOpts.CurrentTime = cert.NotBefore.Add(time.Second)
 
 	return tempOpts

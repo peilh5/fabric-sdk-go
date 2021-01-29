@@ -12,7 +12,6 @@ package x509
 
 import (
 	"encoding/hex"
-	"net/http"
 
 	"github.com/hyperledger/fabric-sdk-go/pkg/common/providers/core"
 
@@ -23,6 +22,7 @@ import (
 	"github.com/hyperledger/fabric-sdk-go/internal/github.com/hyperledger/fabric-ca/sdkinternal/pkg/api"
 	"github.com/hyperledger/fabric-sdk-go/internal/github.com/hyperledger/fabric-ca/sdkinternal/pkg/util"
 	"github.com/pkg/errors"
+	"github.com/tw-bc-group/net-go-gm/http"
 )
 
 const (

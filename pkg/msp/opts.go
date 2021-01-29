@@ -8,6 +8,7 @@ package msp
 
 import (
 	"github.com/hyperledger/fabric-sdk-go/pkg/common/providers/msp"
+	"github.com/hyperledger/fabric-sdk-go/pkg/core/config/comm/gmtls"
 	commtls "github.com/hyperledger/fabric-sdk-go/pkg/core/config/comm/tls"
 	"github.com/pkg/errors"
 )
@@ -23,6 +24,7 @@ type IdentityConfigOptions struct {
 	caKeyStorePath
 	credentialStorePath
 	tlsCACertPool
+	gmtlsCACertPool
 }
 
 type applier func()
@@ -69,6 +71,11 @@ type tlsCACertPool interface {
 	TLSCACertPool() commtls.CertPool
 }
 
+// tlsCACertPool interface allows to uniquely override IdentityConfig interface's TLSCACertPool() function
+type gmtlsCACertPool interface {
+	GMTLSCACertPool() gmtls.CertPool
+}
+
 // BuildIdentityConfigFromOptions will return an IdentityConfig instance pre-built with Optional interfaces
 // provided in fabsdk's WithConfigIdentity(opts...) call
 func BuildIdentityConfigFromOptions(opts ...interface{}) (msp.IdentityConfig, error) {
@@ -98,6 +105,7 @@ func UpdateMissingOptsWithDefaultConfig(c *IdentityConfigOptions, d msp.Identity
 	s.set(c.caKeyStorePath, nil, func() { c.caKeyStorePath = d })
 	s.set(c.credentialStorePath, nil, func() { c.credentialStorePath = d })
 	s.set(c.tlsCACertPool, nil, func() { c.tlsCACertPool = d })
+	s.set(c.gmtlsCACertPool, nil, func() { c.gmtlsCACertPool = d })
 
 	return c
 }

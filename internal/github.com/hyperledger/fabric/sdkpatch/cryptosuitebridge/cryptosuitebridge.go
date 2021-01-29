@@ -40,6 +40,7 @@ const (
 	SHA3_256         = bccsp.SHA3_256
 	SHA3_384         = bccsp.SHA3_384
 	X509Certificate  = bccsp.X509Certificate
+	GMSM3            = bccsp.GMSM3
 )
 
 // NewCspSigner is a bridge for bccsp signer.New call

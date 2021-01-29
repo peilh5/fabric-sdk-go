@@ -25,6 +25,7 @@ package core
 
 import (
 	"crypto"
+	"github.com/hyperledger/fabric-sdk-go/internal/github.com/hyperledger/fabric/bccsp"
 	"hash"
 )
 
@@ -118,4 +119,9 @@ type KeyGenOpts interface {
 	// Ephemeral returns true if the key to generate has to be ephemeral,
 	// false otherwise.
 	Ephemeral() bool
+}
+
+func IsGMCryptoSuite(suite CryptoSuite) bool {
+	_, err := suite.GetHash(&bccsp.GMSM3Opts{})
+	return err == nil
 }

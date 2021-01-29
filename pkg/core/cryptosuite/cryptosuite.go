@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package cryptosuite
 
 import (
+	"github.com/hyperledger/fabric-sdk-go/pkg/core/cryptosuite/bccsp/gm"
 	"sync/atomic"
 
 	"errors"
@@ -16,7 +17,6 @@ import (
 	"github.com/hyperledger/fabric-sdk-go/internal/github.com/hyperledger/fabric/bccsp"
 	"github.com/hyperledger/fabric-sdk-go/pkg/common/logging"
 	"github.com/hyperledger/fabric-sdk-go/pkg/common/providers/core"
-	"github.com/hyperledger/fabric-sdk-go/pkg/core/cryptosuite/bccsp/sw"
 )
 
 var logger = logging.NewLogger("fabsdk/core")
@@ -42,10 +42,10 @@ func GetDefault() core.CryptoSuite {
 		return defaultCryptoSuite
 	}
 	//Set default suite
-	logger.Info("No default cryptosuite found, using default SW implementation")
+	logger.Info("No default cryptosuite found, using default GM implementation")
 
 	// Use SW as the default cryptosuite when not initialized properly - should be for testing only
-	s, err := sw.GetSuiteWithDefaultEphemeral()
+	s, err := gm.GetSuiteWithDefaultEphemeral()
 	if err != nil {
 		logger.Panicf("Could not initialize default cryptosuite: %s", err)
 	}
@@ -76,6 +76,11 @@ func DefaultInitialized() bool {
 //GetSHA256Opts returns options relating to SHA-256.
 func GetSHA256Opts() core.HashOpts {
 	return &bccsp.SHA256Opts{}
+}
+
+//GetGMSM3Opts returns options relating to GMSM3.
+func GetGMSM3Opts() core.HashOpts {
+	return &bccsp.GMSM3Opts{}
 }
 
 //GetSHAOpts returns options for computing SHA.

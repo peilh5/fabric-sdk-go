@@ -9,6 +9,7 @@ package mockfab
 import (
 	tls "crypto/tls"
 	x509 "crypto/x509"
+	x509GM "github.com/Hyperledger-TWGC/tjfoc-gm/x509"
 	"time"
 
 	"github.com/golang/mock/gomock"
@@ -79,5 +80,21 @@ func (c *MockCertPool) Get() (*x509.CertPool, error) {
 
 //Add mock impl of adding certs to cert pool queue
 func (c *MockCertPool) Add(certs ...*x509.Certificate) {
+
+}
+
+//MockGMCertPool for unit tests to mock CertPool
+type MockGMCertPool struct {
+	CertPool *x509GM.CertPool
+	Err      error
+}
+
+//Get mock implementation of fab CertPool.Get()
+func (c *MockGMCertPool) Get() (*x509GM.CertPool, error) {
+	return c.CertPool, c.Err
+}
+
+//Add mock impl of adding certs to cert pool queue
+func (c *MockGMCertPool) Add(certs ...*x509GM.Certificate) {
 
 }

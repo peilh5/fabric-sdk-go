@@ -8,6 +8,8 @@ package comm
 
 import (
 	"crypto/x509"
+	"github.com/Hyperledger-TWGC/tjfoc-gm/gmtls/gmcredentials"
+	x509GM "github.com/Hyperledger-TWGC/tjfoc-gm/x509"
 	"sync/atomic"
 
 	"github.com/pkg/errors"
@@ -130,16 +132,23 @@ func newDialOpts(config fab.EndpointConfig, url string, params *params) ([]grpc.
 	dialOpts = append(dialOpts, grpc.WithDefaultCallOptions(grpc.WaitForReady(!params.failFast)))
 
 	if endpoint.AttemptSecured(url, params.insecure) {
-		tlsConfig, err := comm.TLSConfig(params.certificate, params.hostOverride, config)
-		if err != nil {
-			return nil, err
+		gmtlsConfig, err := comm.GMTLSConfig(params.certificate, params.hostOverride, config)
+		if err == nil {
+			gmtlsConfig.VerifyPeerCertificate = func(rawCerts [][]byte, verifiedChains [][]*x509GM.Certificate) error {
+				return verifier.VerifyPeerGMCertificate(rawCerts, verifiedChains)
+			}
+			dialOpts = append(dialOpts, grpc.WithTransportCredentials(gmcredentials.NewTLS(gmtlsConfig)))
+		} else {
+			tlsConfig, err := comm.TLSConfig(params.certificate, params.hostOverride, config)
+			if err != nil {
+				return nil, err
+			}
+			//verify if certificate was expired or not yet valid
+			tlsConfig.VerifyPeerCertificate = func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+				return verifier.VerifyPeerCertificate(rawCerts, verifiedChains)
+			}
+			dialOpts = append(dialOpts, grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)))
 		}
-		//verify if certificate was expired or not yet valid
-		tlsConfig.VerifyPeerCertificate = func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
-			return verifier.VerifyPeerCertificate(rawCerts, verifiedChains)
-		}
-
-		dialOpts = append(dialOpts, grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)))
 		logger.Debugf("Creating a secure connection to [%s] with TLS HostOverride [%s]", url, params.hostOverride)
 	} else {
 		logger.Debugf("Creating an insecure connection [%s]", url)

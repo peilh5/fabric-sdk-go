@@ -21,9 +21,9 @@ Please review third_party pinning scripts and patches for more details.
 package lib
 
 import (
+	"github.com/hyperledger/fabric-sdk-go/internal/github.com/hyperledger/fabric-ca/lib/gmtls"
 	"github.com/hyperledger/fabric-sdk-go/pkg/common/providers/core"
 
-	"github.com/hyperledger/fabric-sdk-go/internal/github.com/hyperledger/fabric-ca/lib/tls"
 	"github.com/hyperledger/fabric-sdk-go/internal/github.com/hyperledger/fabric-ca/sdkinternal/pkg/api"
 )
 
@@ -31,7 +31,7 @@ import (
 type ClientConfig struct {
 	URL        string `def:"http://localhost:7054" opt:"u" help:"URL of fabric-ca-server"`
 	MSPDir     string `def:"msp" opt:"M" help:"Membership Service Provider directory"`
-	TLS        tls.ClientTLSConfig
+	TLS        gmtls.ClientTLSConfig
 	Enrollment api.EnrollmentRequest
 	CSR        api.CSRInfo
 	ID         api.RegistrationRequest

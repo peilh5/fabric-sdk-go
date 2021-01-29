@@ -16,6 +16,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	x509GM "github.com/Hyperledger-TWGC/tjfoc-gm/x509"
 )
 
 func derToPrivateKey(der []byte) (key interface{}, err error) {
@@ -34,6 +35,10 @@ func derToPrivateKey(der []byte) (key interface{}, err error) {
 	}
 
 	if key, err = x509.ParseECPrivateKey(der); err == nil {
+		return
+	}
+
+	if key, err = x509GM.ParsePKCS8UnecryptedPrivateKey(der); err == nil {
 		return
 	}
 

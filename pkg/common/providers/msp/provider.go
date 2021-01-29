@@ -8,6 +8,7 @@ package msp
 
 import (
 	"github.com/hyperledger/fabric-sdk-go/pkg/common/providers/core"
+	"github.com/hyperledger/fabric-sdk-go/pkg/core/config/comm/gmtls"
 	commtls "github.com/hyperledger/fabric-sdk-go/pkg/core/config/comm/tls"
 	logApi "github.com/hyperledger/fabric-sdk-go/pkg/core/logging/api"
 )
@@ -33,6 +34,7 @@ type IdentityConfig interface {
 	TLSCACertPool() commtls.CertPool
 	CAKeyStorePath() string
 	CredentialStorePath() string
+	GMTLSCACertPool() gmtls.CertPool
 }
 
 // ClientConfig provides the definition of the client configuration

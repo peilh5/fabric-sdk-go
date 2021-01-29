@@ -5,6 +5,7 @@
 package mockmsp
 
 import (
+	commgmtls "github.com/hyperledger/fabric-sdk-go/pkg/core/config/comm/gmtls"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -16,6 +17,10 @@ import (
 type MockIdentityConfig struct {
 	ctrl     *gomock.Controller
 	recorder *MockIdentityConfigMockRecorder
+}
+
+func (m *MockIdentityConfig) GMTLSCACertPool() commgmtls.CertPool {
+	panic("implement me")
 }
 
 // MockIdentityConfigMockRecorder is the mock recorder for MockIdentityConfig

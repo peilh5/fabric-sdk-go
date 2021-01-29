@@ -12,7 +12,9 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/Hyperledger-TWGC/tjfoc-gm/gmtls"
 	"github.com/hyperledger/fabric-sdk-go/pkg/common/providers/fab"
+	commgmtls "github.com/hyperledger/fabric-sdk-go/pkg/core/config/comm/gmtls"
 	commtls "github.com/hyperledger/fabric-sdk-go/pkg/core/config/comm/tls"
 )
 
@@ -30,13 +32,25 @@ type EndpointConfigOptions struct {
 	channelPeers
 	channelOrderers
 	tlsCACertPool
+	gmtlsCACertPool
 	tlsClientCerts
+	gmtlsClientCerts
 	cryptoConfigPath
 }
 
 type applier func()
 type predicate func() bool
 type setter struct{ isSet bool }
+
+// tlsCACertPool interface allows to uniquely override EndpointConfig interface's TLSCACertPool() function
+type gmtlsCACertPool interface {
+	GMTLSCACertPool() commgmtls.CertPool
+}
+
+// tlsClientCerts interface allows to uniquely override EndpointConfig interface's TLSClientCerts() function
+type gmtlsClientCerts interface {
+	GMTLSClientCerts() []gmtls.Certificate
+}
 
 // timeout interface allows to uniquely override EndpointConfig interface's Timeout() function
 type timeout interface {

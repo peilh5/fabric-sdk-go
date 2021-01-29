@@ -14,9 +14,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/hyperledger/fabric-sdk-go/internal/github.com/hyperledger/fabric-ca/lib/gmsigner"
 	"io/ioutil"
 	"net"
-	"net/http"
 	"net/url"
 	"os"
 	"path"
@@ -25,16 +25,16 @@ import (
 	"strings"
 
 	"github.com/hyperledger/fabric-sdk-go/pkg/common/providers/core"
-
+	"github.com/hyperledger/fabric-sdk-go/internal/github.com/hyperledger/fabric-ca/lib/gmtls"
 	cfsslapi "github.com/cloudflare/cfssl/api"
 	"github.com/cloudflare/cfssl/csr"
 	"github.com/hyperledger/fabric-sdk-go/internal/github.com/hyperledger/fabric-ca/lib/client/credential"
 	x509cred "github.com/hyperledger/fabric-sdk-go/internal/github.com/hyperledger/fabric-ca/lib/client/credential/x509"
 	"github.com/hyperledger/fabric-sdk-go/internal/github.com/hyperledger/fabric-ca/lib/streamer"
-	"github.com/hyperledger/fabric-sdk-go/internal/github.com/hyperledger/fabric-ca/lib/tls"
 	"github.com/hyperledger/fabric-sdk-go/internal/github.com/hyperledger/fabric-ca/sdkinternal/pkg/api"
 	"github.com/hyperledger/fabric-sdk-go/internal/github.com/hyperledger/fabric-ca/sdkinternal/pkg/util"
 	log "github.com/hyperledger/fabric-sdk-go/internal/github.com/hyperledger/fabric-ca/sdkpatch/logbridge"
+	"github.com/tw-bc-group/net-go-gm/http"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 )
@@ -141,15 +141,14 @@ func (c *Client) initHTTPClient(serverName string) error {
 	if c.Config.TLS.Enabled {
 		log.Info("TLS Enabled")
 
-		tlsConfig, err2 := tls.GetClientTLSConfig(&c.Config.TLS, c.csp)
+		tlsConfig, err2 := gmtls.GetClientTLSConfig(&c.Config.TLS, c.csp)
 		if err2 != nil {
 			return fmt.Errorf("Failed to get client TLS config: %s", err2)
 		}
 		// set the default ciphers
-		tlsConfig.CipherSuites = tls.DefaultCipherSuites
+		tlsConfig.CipherSuites = gmtls.DefaultCipherSuites
 		//set the host name override
 		tlsConfig.ServerName = serverName
-
 		tr.TLSClientConfig = tlsConfig
 	}
 	c.httpClient = &http.Client{Transport: tr}
@@ -205,7 +204,14 @@ func (c *Client) GenCSR(req *api.CSRInfo, id string) ([]byte, core.Key, error) {
 		return nil, nil, err
 	}
 
-	csrPEM, err := csr.Generate(cspSigner, cr)
+	var csrPEM []byte
+
+	if core.IsGMCryptoSuite(c.csp) {
+		csrPEM, err = gmsigner.GenerateGMCsr(cspSigner, cr)
+	} else {
+		csrPEM, err = csr.Generate(cspSigner, cr)
+	}
+
 	if err != nil {
 		log.Debugf("failed generating CSR: %s", err)
 		return nil, nil, err
@@ -463,6 +469,7 @@ func (c *Client) SendReq(req *http.Request, result interface{}) (err error) {
 	}
 
 	resp, err := c.httpClient.Do(req)
+
 	if err != nil {
 		return errors.Wrapf(err, "%s failure of request: %s", req.Method, reqStr)
 	}

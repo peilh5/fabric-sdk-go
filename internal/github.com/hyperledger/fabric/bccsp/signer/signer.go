@@ -18,6 +18,8 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/hyperledger/fabric-sdk-go/pkg/common/providers/core"
+
+	x509GM "github.com/Hyperledger-TWGC/tjfoc-gm/x509"
 )
 
 // bccspCryptoSigner is the BCCSP-based implementation of a crypto.Signer
@@ -52,9 +54,13 @@ func New(csp core.CryptoSuite, key core.Key) (crypto.Signer, error) {
 		return nil, errors.Wrap(err, "failed marshalling public key")
 	}
 
-	pk, err := x509.ParsePKIXPublicKey(raw)
+	var pk interface{}
+	pk, err = x509GM.ParseSm2PublicKey(raw)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed marshalling der to public key")
+		pk, err = x509.ParsePKIXPublicKey(raw)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed marshalling der to public key")
+		}
 	}
 
 	return &bccspCryptoSigner{csp, key, pk}, nil

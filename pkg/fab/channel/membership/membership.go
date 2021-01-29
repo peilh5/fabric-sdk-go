@@ -9,6 +9,7 @@ package membership
 import (
 	"crypto/x509"
 	"encoding/pem"
+	x509GM "github.com/Hyperledger-TWGC/tjfoc-gm/x509"
 
 	"strings"
 
@@ -89,11 +90,11 @@ func areCertDatesValid(serializedID []byte) error {
 	if bl == nil {
 		return errors.New("could not decode the PEM structure")
 	}
-	cert, err := x509.ParseCertificate(bl.Bytes)
+	cert, err := x509GM.ParseCertificate(bl.Bytes)
 	if err != nil {
 		return err
 	}
-	err = verifier.ValidateCertificateDates(cert)
+	err = verifier.ValidateGMCertificateDates(cert)
 	if err != nil {
 		logger.Warnf("Certificate error '%s' for cert '%v'", err, cert.SerialNumber)
 		return err
@@ -131,9 +132,12 @@ func createMSPManager(ctx Context, cfg fab.ChannelCfg) (msp.MSPManager, []string
 
 	//To make sure tls cert pool is updated in advance with all the new certs being added,
 	// to avoid delay in first endorsement connection with new peer
-	_, err := ctx.EndpointConfig.TLSCACertPool().Get()
+	_, err := ctx.EndpointConfig.GMTLSCACertPool().Get()
 	if err != nil {
-		return nil, nil, err
+		_, err := ctx.EndpointConfig.TLSCACertPool().Get()
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
 	return mspManager, mspNames, nil
@@ -222,6 +226,8 @@ func addCertsToConfig(config fab.EndpointConfig, pemCertsList [][]byte) {
 	}
 
 	var certs []*x509.Certificate
+	var gmCerts []*x509GM.Certificate
+
 	for _, pemCerts := range pemCertsList {
 		for len(pemCerts) > 0 {
 			var block *pem.Block
@@ -233,19 +239,34 @@ func addCertsToConfig(config fab.EndpointConfig, pemCertsList [][]byte) {
 				continue
 			}
 
-			cert, err := x509.ParseCertificate(block.Bytes)
+			gmCert, err := x509GM.ParseCertificate(block.Bytes)
 			if err != nil {
-				continue
-			}
-			err = verifier.ValidateCertificateDates(cert)
-			if err != nil {
-				logger.Warn("%v", err)
-				continue
-			}
+				cert, err := x509.ParseCertificate(block.Bytes)
+				if err != nil {
+					continue
+				}
+				err = verifier.ValidateCertificateDates(cert)
+				if err != nil {
+					logger.Warn("%v", err)
+					continue
+				}
 
-			certs = append(certs, cert)
+				certs = append(certs, cert)
+			} else {
+				err = verifier.ValidateGMCertificateDates(gmCert)
+				if err != nil {
+					logger.Warn("%v", err)
+					continue
+				}
+
+				gmCerts = append(gmCerts, gmCert)
+			}
 		}
 	}
 
-	config.TLSCACertPool().Add(certs...)
+	if config.GMTLSCACertPool() != nil {
+		config.GMTLSCACertPool().Add(gmCerts...)
+	} else if config.TLSCACertPool() != nil {
+		config.TLSCACertPool().Add(certs...)
+	}
 }

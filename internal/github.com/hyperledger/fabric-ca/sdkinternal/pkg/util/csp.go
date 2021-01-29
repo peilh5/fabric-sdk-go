@@ -31,8 +31,9 @@ import (
 	"io/ioutil"
 	"strings"
 
+	"github.com/Hyperledger-TWGC/tjfoc-gm/sm2"
+	x509GM "github.com/Hyperledger-TWGC/tjfoc-gm/x509"
 	"github.com/hyperledger/fabric-sdk-go/pkg/common/providers/core"
-
 	"github.com/cloudflare/cfssl/csr"
 	"github.com/cloudflare/cfssl/helpers"
 	factory "github.com/hyperledger/fabric-sdk-go/internal/github.com/hyperledger/fabric-ca/sdkpatch/cryptosuitebridge"
@@ -120,9 +121,12 @@ func BCCSPKeyRequestGenerate(req *csr.CertificateRequest, myCSP core.CryptoSuite
 	if err != nil {
 		return nil, nil, err
 	}
-	key, err := myCSP.KeyGen(keyOpts)
+	key, err := myCSP.KeyGen(factory.GetGMSM2KeyKeyGenOpts(false))
 	if err != nil {
-		return nil, nil, err
+		key, err = myCSP.KeyGen(keyOpts)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 	cspSigner, err := factory.NewCspSigner(myCSP, key)
 	if err != nil {
@@ -153,6 +157,16 @@ func ImportBCCSPKeyFromPEMBytes(keyBuff []byte, myCSP core.CryptoSuite, temporar
 		return nil, errors.WithMessage(err, fmt.Sprintf("Failed parsing private key from %s", keyFile))
 	}
 	switch key.(type) {
+	case *sm2.PrivateKey:
+		priv, err := x509GM.MarshalSm2UnecryptedPrivateKey(key.(*sm2.PrivateKey))
+		if err != nil {
+			return nil, errors.WithMessage(err, fmt.Sprintf("Failed to convert sm2 private key for '%s'", keyFile))
+		}
+		sk, err := myCSP.KeyImport(priv, factory.GetGMSM2PrivateKeyImportOpts(temporary))
+		if err != nil {
+			return nil, errors.WithMessage(err, fmt.Sprintf("Failed to import sm2 private key for '%s'", keyFile))
+		}
+		return sk, nil
 	case *ecdsa.PrivateKey:
 		priv, err := factory.PrivateKeyToDER(key.(*ecdsa.PrivateKey))
 		if err != nil {

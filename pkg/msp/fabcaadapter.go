@@ -628,7 +628,8 @@ func createFabricCAClient(caID string, cryptoSuite core.CryptoSuite, config msp.
 	}
 
 	var err error
-	c.Config.TLS.TlsCertPool, err = config.TLSCACertPool().Get()
+	//c.Config.TLS.TlsCertPool, err = config.TLSCACertPool().Get()
+	c.Config.TLS.TlsCertPool, err = config.GMTLSCACertPool().Get()
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't load configured cert pool")
 	}

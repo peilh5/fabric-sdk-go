@@ -13,7 +13,6 @@ package cryptosuitebridge
 import (
 	"crypto"
 	"crypto/ecdsa"
-
 	"github.com/hyperledger/fabric-sdk-go/internal/github.com/hyperledger/fabric-ca/sdkpatch/keyutil"
 	"github.com/hyperledger/fabric-sdk-go/internal/github.com/hyperledger/fabric/bccsp"
 	cspsigner "github.com/hyperledger/fabric-sdk-go/internal/github.com/hyperledger/fabric/bccsp/signer"
@@ -82,6 +81,10 @@ func GetECDSAP256KeyGenOpts(ephemeral bool) core.KeyGenOpts {
 	return &bccsp.ECDSAP256KeyGenOpts{Temporary: ephemeral}
 }
 
+func GetGMSM2KeyKeyGenOpts(ephemeral bool) core.KeyGenOpts {
+	return &bccsp.GMSM2KeyGenOpts{Temporary: ephemeral}
+}
+
 //GetECDSAP384KeyGenOpts options for ECDSA key generation with curve P-384.
 func GetECDSAP384KeyGenOpts(ephemeral bool) core.KeyGenOpts {
 	return &bccsp.ECDSAP384KeyGenOpts{Temporary: ephemeral}
@@ -96,4 +99,12 @@ func GetX509PublicKeyImportOpts(ephemeral bool) core.KeyImportOpts {
 // or PKCS#8 format.
 func GetECDSAPrivateKeyImportOpts(ephemeral bool) core.KeyImportOpts {
 	return &bccsp.ECDSAPrivateKeyImportOpts{Temporary: ephemeral}
+}
+
+func GetGMSM2PrivateKeyImportOpts(ephemer bool) core.KeyImportOpts {
+	return &bccsp.GMSM2PrivateKeyImportOpts{Temporary: ephemer}
+}
+
+func GetGMSM2PublicKeyImportOpts(ephemer bool) core.KeyImportOpts {
+	return &bccsp.GMSM2PublicKeyImportOpts{Temporary: ephemer}
 }
