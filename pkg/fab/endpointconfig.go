@@ -1391,12 +1391,14 @@ func (c *EndpointConfig) loadChannelOrderers() error {
 func (c *EndpointConfig) loadTLSCertPool() error {
 
 	var err error
-	c.gmtlsCertPool, err = commgmtls.NewCertPool(c.backend.GetBool("client.tlsCerts.systemCertPool"))
-	if err != nil {
-		c.tlsCertPool, err = commtls.NewCertPool(c.backend.GetBool("client.tlsCerts.systemCertPool"))
-	}
+	c.tlsCertPool, err = commtls.NewCertPool(c.backend.GetBool("client.tlsCerts.systemCertPool"))
 	if err != nil {
 		return errors.WithMessage(err, "failed to create cert pool")
+	}
+
+	c.gmtlsCertPool, err = commgmtls.NewCertPool(c.backend.GetBool("client.tlsCerts.systemCertPool"))
+	if err != nil {
+		return errors.WithMessage(err, "failed to create gm cert pool")
 	}
 
 	certs, err := c.loadGMTLSCerts()

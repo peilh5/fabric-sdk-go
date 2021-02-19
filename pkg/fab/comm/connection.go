@@ -10,6 +10,7 @@ import (
 	"crypto/x509"
 	"github.com/Hyperledger-TWGC/tjfoc-gm/gmtls/gmcredentials"
 	x509GM "github.com/Hyperledger-TWGC/tjfoc-gm/x509"
+	"github.com/hyperledger/fabric-sdk-go/internal/github.com/hyperledger/fabric/bccsp/utils"
 	"sync/atomic"
 
 	"github.com/pkg/errors"
@@ -132,8 +133,11 @@ func newDialOpts(config fab.EndpointConfig, url string, params *params) ([]grpc.
 	dialOpts = append(dialOpts, grpc.WithDefaultCallOptions(grpc.WaitForReady(!params.failFast)))
 
 	if endpoint.AttemptSecured(url, params.insecure) {
-		gmtlsConfig, err := comm.GMTLSConfig(params.certificate, params.hostOverride, config)
-		if err == nil {
+		if params.certificate == nil || utils.IsSm2X509Cert(params.certificate) {
+			gmtlsConfig, err := comm.GMTLSConfig(params.certificate, params.hostOverride, config)
+			if err != nil {
+				return nil, err
+			}
 			gmtlsConfig.VerifyPeerCertificate = func(rawCerts [][]byte, verifiedChains [][]*x509GM.Certificate) error {
 				return verifier.VerifyPeerGMCertificate(rawCerts, verifiedChains)
 			}

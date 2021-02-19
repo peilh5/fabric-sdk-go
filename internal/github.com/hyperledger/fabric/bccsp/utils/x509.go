@@ -18,9 +18,14 @@ package utils
 
 import (
 	"crypto/x509"
+	x509GM "github.com/Hyperledger-TWGC/tjfoc-gm/x509"
 )
 
 // DERToX509Certificate converts der to x509
 func DERToX509Certificate(asn1Data []byte) (*x509.Certificate, error) {
 	return x509.ParseCertificate(asn1Data)
+}
+
+func IsSm2X509Cert(cert *x509.Certificate) bool {
+	return cert.SignatureAlgorithm == x509.SignatureAlgorithm(x509GM.SM2WithSM3)
 }

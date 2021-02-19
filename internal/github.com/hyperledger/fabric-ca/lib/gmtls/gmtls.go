@@ -21,6 +21,7 @@ Please review third_party pinning scripts and patches for more details.
 package gmtls
 
 import (
+	"crypto/x509"
 	"time"
 
 	"github.com/Hyperledger-TWGC/tjfoc-gm/gmtls"
@@ -40,10 +41,11 @@ var DefaultCipherSuites = []uint16{
 
 // ClientTLSConfig defines the key material for a TLS client
 type ClientTLSConfig struct {
-	Enabled     bool     `skip:"true"`
-	CertFiles   [][]byte `help:"A list of comma-separated PEM-encoded trusted certificate bytes"`
-	Client      KeyCertFiles
-	TlsCertPool *x509GM.CertPool
+	Enabled       bool     `skip:"true"`
+	CertFiles     [][]byte `help:"A list of comma-separated PEM-encoded trusted certificate bytes"`
+	Client        KeyCertFiles
+	TlsCertPool   *x509.CertPool
+	GmTlsCertPool *x509GM.CertPool
 }
 
 // KeyCertFiles defines the files need for client on TLS
@@ -75,7 +77,7 @@ func GetClientTLSConfig(cfg *ClientTLSConfig, csp core.CryptoSuite) (*gmtls.Conf
 	} else {
 		log.Debug("Client TLS certificate and/or key file not provided")
 	}
-	rootCAPool := cfg.TlsCertPool
+	rootCAPool := cfg.GmTlsCertPool
 
 	if rootCAPool == nil {
 		rootCAPool, err := x509GM.SystemCertPool()
@@ -96,8 +98,13 @@ func GetClientTLSConfig(cfg *ClientTLSConfig, csp core.CryptoSuite) (*gmtls.Conf
 		}
 	}
 
+	var gmSupport *gmtls.GMSupport
+	if core.IsGMCryptoSuite(csp) {
+		gmSupport = &gmtls.GMSupport{}
+	}
+
 	config := &gmtls.Config{
-		GMSupport:    &gmtls.GMSupport{},
+		GMSupport:    gmSupport,
 		Certificates: certs,
 		RootCAs:      rootCAPool,
 	}

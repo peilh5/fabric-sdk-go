@@ -9,6 +9,7 @@ package peer
 import (
 	reqContext "context"
 	"crypto/x509"
+	"github.com/hyperledger/fabric-sdk-go/internal/github.com/hyperledger/fabric/bccsp/utils"
 	"regexp"
 	"time"
 
@@ -72,8 +73,17 @@ func newPeerEndorser(endorseReq *peerEndorserRequest) (*peerEndorser, error) {
 	grpcOpts = append(grpcOpts, grpc.WithDefaultCallOptions(grpc.WaitForReady(!endorseReq.failFast)))
 
 	if endpoint.AttemptSecured(endorseReq.target, endorseReq.allowInsecure) {
-		gmtlsConfig, err := comm.GMTLSConfig(endorseReq.certificate, endorseReq.serverHostOverride, endorseReq.config)
-		if err != nil {
+		if endorseReq.certificate == nil || utils.IsSm2X509Cert(endorseReq.certificate) {
+			gmtlsConfig, err := comm.GMTLSConfig(endorseReq.certificate, endorseReq.serverHostOverride, endorseReq.config)
+			if err != nil {
+				return nil, err
+			}
+			//verify if certificate was expired or not yet valid
+			gmtlsConfig.VerifyPeerCertificate = func(rawCerts [][]byte, verifiedChains [][]*x509GM.Certificate) error {
+				return verifier.VerifyPeerGMCertificate(rawCerts, verifiedChains)
+			}
+			grpcOpts = append(grpcOpts, grpc.WithTransportCredentials(gmcredentials.NewTLS(gmtlsConfig)))
+		} else {
 			tlsConfig, err := comm.TLSConfig(endorseReq.certificate, endorseReq.serverHostOverride, endorseReq.config)
 			if err != nil {
 				return nil, err
@@ -83,13 +93,7 @@ func newPeerEndorser(endorseReq *peerEndorserRequest) (*peerEndorser, error) {
 				return verifier.VerifyPeerCertificate(rawCerts, verifiedChains)
 			}
 			grpcOpts = append(grpcOpts, grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)))
-		} else {
-			gmtlsConfig.VerifyPeerCertificate = func(rawCerts [][]byte, verifiedChains [][]*x509GM.Certificate) error {
-				return verifier.VerifyPeerGMCertificate(rawCerts, verifiedChains)
-			}
-			grpcOpts = append(grpcOpts, grpc.WithTransportCredentials(gmcredentials.NewTLS(gmtlsConfig)))
 		}
-
 	} else {
 		grpcOpts = append(grpcOpts, grpc.WithInsecure())
 	}

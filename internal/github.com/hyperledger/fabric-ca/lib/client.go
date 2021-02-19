@@ -469,7 +469,6 @@ func (c *Client) SendReq(req *http.Request, result interface{}) (err error) {
 	}
 
 	resp, err := c.httpClient.Do(req)
-
 	if err != nil {
 		return errors.Wrapf(err, "%s failure of request: %s", req.Method, reqStr)
 	}

@@ -68,7 +68,6 @@ func computeHash(msg []byte) ([]byte, error) {
 	return h, err
 }
 
-// GM support
 func GMTLSConfig(cert *x509.Certificate, serverName string, config fab.EndpointConfig) (*gmtls.Config, error) {
 	if cert != nil {
 		gmCert := &x509GM.Certificate{}

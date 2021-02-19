@@ -9,6 +9,7 @@ package msp
 import (
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -253,20 +254,21 @@ func (c *IdentityConfig) loadTLSCertPool(ce *identityConfigEntity) error {
 	useSystemCertPool := ce.Client.TLSCerts.SystemCertPool
 
 	var err error
-	c.gmtlsCertPool, err = commgmtls.NewCertPool(useSystemCertPool)
-	if err != nil {
-		c.tlsCertPool, err = commtls.NewCertPool(useSystemCertPool)
-	}
-
+	c.tlsCertPool, err = commtls.NewCertPool(useSystemCertPool)
 	if err != nil {
 		return errors.WithMessage(err, "failed to create cert pool")
 	}
 
+	c.gmtlsCertPool, err = commgmtls.NewCertPool(useSystemCertPool)
+	if err != nil {
+		return errors.WithMessage(err, "failed to create gm cert pool")
+	}
+
 	if c.gmtlsCertPool != nil {
 		for _, ca := range c.caConfigs {
-			//if len(ca.TLSCAServerCerts) == 0 && !useSystemCertPool {
-			//	return errors.New(fmt.Sprintf("Org '%s' doesn't have defined tlsCACerts", ca.ID))
-			//}
+			if len(ca.TLSCAServerCerts) == 0 && !useSystemCertPool {
+				return errors.New(fmt.Sprintf("Org '%s' doesn't have defined tlsCACerts", ca.ID))
+			}
 			for _, cacert := range ca.TLSCAServerCerts {
 				ok := appendGMCertsFromPEM(c.gmtlsCertPool, cacert)
 				if !ok {
@@ -282,9 +284,9 @@ func (c *IdentityConfig) loadTLSCertPool(ce *identityConfigEntity) error {
 		// preemptively add all TLS certs to cert pool as adding them at request time
 		// is expensive
 		for _, ca := range c.caConfigs {
-			//if len(ca.TLSCAServerCerts) == 0 && !useSystemCertPool {
-			//	return errors.New(fmt.Sprintf("Org '%s' doesn't have defined tlsCACerts", ca.ID))
-			//}
+			if len(ca.TLSCAServerCerts) == 0 && !useSystemCertPool {
+				return errors.New(fmt.Sprintf("Org '%s' doesn't have defined tlsCACerts", ca.ID))
+			}
 			for _, cacert := range ca.TLSCAServerCerts {
 				ok := appendCertsFromPEM(c.tlsCertPool, cacert)
 				if !ok {
