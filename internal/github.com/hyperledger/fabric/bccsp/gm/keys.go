@@ -15,7 +15,7 @@ import (
 )
 
 func derToPrivateKey(der []byte) (key interface{}, err error) {
-	key, err = x509GM.ParsePKCS8UnecryptedPrivateKey(der)
+	key, err = x509GM.ParseSm2PrivateKey(der)
 
 	if err == nil {
 		return key, nil

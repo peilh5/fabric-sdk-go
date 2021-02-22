@@ -5,7 +5,7 @@
 module github.com/hyperledger/fabric-sdk-go
 
 require (
-	github.com/Hyperledger-TWGC/tjfoc-gm v1.4.0
+	github.com/Hyperledger-TWGC/tjfoc-gm v0.0.0-20210222084201-e65875425ad3
 	github.com/Knetic/govaluate v3.0.1-0.20170926212237-aa73cfd04eeb+incompatible
 	github.com/VividCortex/gohistogram v1.0.0 // indirect
 	github.com/cloudflare/cfssl v1.5.0

@@ -27,6 +27,9 @@ func PrivateKeyToDER(privateKey *ecdsa.PrivateKey) ([]byte, error) {
 }
 
 func derToPrivateKey(der []byte) (key interface{}, err error) {
+	if key, err = x509GM.ParseSm2PrivateKey(der); err == nil {
+		return
+	}
 
 	if key, err = x509GM.ParsePKCS8UnecryptedPrivateKey(der); err == nil {
 		return
