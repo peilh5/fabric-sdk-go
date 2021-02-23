@@ -15,12 +15,13 @@ import (
 )
 
 func derToPrivateKey(der []byte) (key interface{}, err error) {
-	key, err = x509GM.ParseSm2PrivateKey(der)
-
-	if err == nil {
+	if key, err = x509GM.ParsePKCS8UnecryptedPrivateKey(der); err == nil {
 		return key, nil
 	}
 
+	if key, err = x509GM.ParseSm2PrivateKey(der); err == nil {
+		return key, nil
+	}
 	return nil, errors.New("Invalid key type. The DER must contain an rsa.PrivateKey or ecdsa.PrivateKey")
 }
 
