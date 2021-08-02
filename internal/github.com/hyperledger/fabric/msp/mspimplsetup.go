@@ -146,7 +146,7 @@ func (msp *bccspmsp) setupCAs(conf *m.FabricMSPConfig) error {
 	for _, v := range conf.RootCerts {
 		//add by tw matrix, 如果是国密证书，加入国密ca池子中
 		gmCert, err := msp.getGMCertFromPem(v)
-		if err != nil {
+		if err != nil || gmCert.SignatureAlgorithm != x509GM.SM2WithSM3 {
 			cert, err := msp.getCertFromPem(v)
 			if err != nil {
 				return err

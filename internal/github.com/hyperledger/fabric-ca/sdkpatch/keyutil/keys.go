@@ -31,14 +31,6 @@ func derToPrivateKey(der []byte) (key interface{}, err error) {
 		return
 	}
 
-	if key, err = x509GM.ParsePKCS8UnecryptedPrivateKey(der); err == nil {
-		return
-	}
-
-	if key, err = x509.ParsePKCS1PrivateKey(der); err == nil {
-		return key, nil
-	}
-
 	if key, err = x509.ParsePKCS8PrivateKey(der); err == nil {
 		switch key.(type) {
 		case *ecdsa.PrivateKey:
@@ -46,6 +38,13 @@ func derToPrivateKey(der []byte) (key interface{}, err error) {
 		default:
 			return nil, errors.New("found unknown private key type in PKCS#8 wrapping")
 		}
+	}
+	if key, err = x509GM.ParsePKCS8UnecryptedPrivateKey(der); err == nil {
+		return
+	}
+
+	if key, err = x509.ParsePKCS1PrivateKey(der); err == nil {
+		return key, nil
 	}
 
 	if key, err = x509.ParseECPrivateKey(der); err == nil {

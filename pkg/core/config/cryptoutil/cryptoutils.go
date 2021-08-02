@@ -62,7 +62,7 @@ func GetPublicKeyFromCert(cert []byte, cs core.CryptoSuite) (core.Key, error) {
 
 	x509Cert, err := x509GM.ParseCertificate(dcert.Bytes)
 
-	if err != nil {
+	if err != nil || x509Cert.(*x509GM.Certificate).SignatureAlgorithm != x509GM.SM2WithSM3 {
 		x509Cert, err = x509.ParseCertificate(dcert.Bytes)
 		if err != nil {
 			return nil, errors.Errorf("Unable to parse cert from decoded bytes: %s", err)

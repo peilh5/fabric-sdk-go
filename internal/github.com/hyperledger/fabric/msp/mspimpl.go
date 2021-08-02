@@ -205,6 +205,7 @@ func (msp *bccspmsp) getGMCertFromPem(idBytes []byte) (*x509GM.Certificate, erro
 		return nil, errors.Wrap(err, "getGMCertFromPem error: failed to parse x509 cert")
 	}
 
+
 	return cert, nil
 }
 
@@ -437,10 +438,21 @@ func (msp *bccspmsp) deserializeIdentityInternal(serializedIdentity []byte) (Ide
 	if bl == nil {
 		return nil, errors.New("could not decode the PEM structure")
 	}
+	var cert interface{}
 	cert, err := x509GM.ParseCertificate(bl.Bytes)
-	if err != nil {
-		return nil, errors.Wrap(err, "parseCertificate failed")
+	if err != nil || cert.(*x509GM.Certificate).SignatureAlgorithm != x509GM.SM2WithSM3 {
+		cert, err = x509.ParseCertificate(bl.Bytes)
+		if err != nil {
+			return nil, errors.Errorf("Unable to parse cert from decoded bytes: %s", err)
+		}
+		pub, err := msp.bccsp.KeyImport(cert, factory.GetX509PublicKeyImportOpts(true))
+		if err != nil {
+			return nil, errors.WithMessage(err, "failed to import certificate's public key")
+		}
+
+		return newIdentity(cert, pub, msp)
 	}
+
 
 	// Now we have the certificate; make sure that its fields
 	// (e.g. the Issuer.OU or the Subject.OU) match with the
@@ -454,7 +466,7 @@ func (msp *bccspmsp) deserializeIdentityInternal(serializedIdentity []byte) (Ide
 		return nil, errors.WithMessage(err, "failed to import certificate's public key")
 	}
 
-	return newIdentity(cert.ToX509Certificate(), pub, msp)
+	return newIdentity(cert.(*x509GM.Certificate).ToX509Certificate(), pub, msp)
 }
 
 // SatisfiesPrincipal returns nil if the identity matches the principal or an error otherwise
