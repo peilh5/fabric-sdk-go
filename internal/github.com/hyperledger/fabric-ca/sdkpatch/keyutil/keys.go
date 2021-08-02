@@ -16,19 +16,20 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	x509GM "github.com/Hyperledger-TWGC/tjfoc-gm/x509"
 )
 
 func PrivateKeyToDER(privateKey *ecdsa.PrivateKey) ([]byte, error) {
 	if privateKey == nil {
 		return nil, errors.New("invalid ecdsa private key. It must be different from nil")
 	}
+
 	return x509.MarshalECPrivateKey(privateKey)
 }
 
 func derToPrivateKey(der []byte) (key interface{}, err error) {
-	if key, err = x509GM.ParseSm2PrivateKey(der); err == nil {
-		return
+
+	if key, err = x509.ParsePKCS1PrivateKey(der); err == nil {
+		return key, nil
 	}
 
 	if key, err = x509.ParsePKCS8PrivateKey(der); err == nil {
@@ -38,13 +39,6 @@ func derToPrivateKey(der []byte) (key interface{}, err error) {
 		default:
 			return nil, errors.New("found unknown private key type in PKCS#8 wrapping")
 		}
-	}
-	if key, err = x509GM.ParsePKCS8UnecryptedPrivateKey(der); err == nil {
-		return
-	}
-
-	if key, err = x509.ParsePKCS1PrivateKey(der); err == nil {
-		return key, nil
 	}
 
 	if key, err = x509.ParseECPrivateKey(der); err == nil {
