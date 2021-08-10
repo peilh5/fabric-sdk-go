@@ -8,6 +8,7 @@ package comm
 
 import (
 	"github.com/Hyperledger-TWGC/tjfoc-gm/gmtls/gmcredentials"
+	"google.golang.org/grpc/credentials"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -56,14 +57,27 @@ func NewStreamConnection(ctx fabcontext.Client, chConfig fab.ChannelCfg, streamP
 	}
 
 	if peer.AuthInfo != nil {
-		tlsInfo := peer.AuthInfo.(gmcredentials.TLSInfo)
-		for _, peercert := range tlsInfo.State.PeerCertificates {
-			err := verifier.ValidateGMCertificateDates(peercert)
-			if err != nil {
-				logger.Error(err)
-				return nil, errors.Wrapf(err, "error validating certificate dates for [%v]", peercert.Subject)
+		switch tlsInfo := peer.AuthInfo.(type) {
+		case nil:
+			return nil, errors.Wrapf(err, "NewStreamConnection peer.AuthInfo.(type) is nil")
+		case gmcredentials.TLSInfo:
+			for _, peercert := range tlsInfo.State.PeerCertificates {
+				err := verifier.ValidateGMCertificateDates(peercert)
+				if err != nil {
+					logger.Error(err)
+					return nil, errors.Wrapf(err, "error validating certificate dates for [%v]", peercert.Subject)
+				}
+			}
+		case credentials.TLSInfo:
+			for _, peercert := range tlsInfo.State.PeerCertificates {
+				err := verifier.ValidateCertificateDates(peercert)
+				if err != nil {
+					logger.Error(err)
+					return nil, errors.Wrapf(err, "error validating certificate dates for [%v]", peercert.Subject)
+				}
 			}
 		}
+
 	}
 
 	return &StreamConnection{

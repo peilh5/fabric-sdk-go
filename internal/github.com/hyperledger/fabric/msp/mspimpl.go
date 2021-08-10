@@ -450,7 +450,7 @@ func (msp *bccspmsp) deserializeIdentityInternal(serializedIdentity []byte) (Ide
 			return nil, errors.WithMessage(err, "failed to import certificate's public key")
 		}
 
-		return newIdentity(cert, pub, msp)
+		return newIdentity(cert.(*x509.Certificate), pub, msp)
 	}
 
 

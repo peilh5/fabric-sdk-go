@@ -55,9 +55,9 @@ func New(csp core.CryptoSuite, key core.Key) (crypto.Signer, error) {
 	}
 
 	var pk interface{}
-	pk, err = x509GM.ParseSm2PublicKey(raw)
+	pk, err = x509.ParsePKIXPublicKey (raw)
 	if err != nil {
-		pk, err = x509.ParsePKIXPublicKey(raw)
+		pk, err = x509GM.ParseSm2PublicKey(raw)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed marshalling der to public key")
 		}

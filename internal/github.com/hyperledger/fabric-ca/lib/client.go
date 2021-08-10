@@ -149,6 +149,7 @@ func (c *Client) initHTTPClient(serverName string) error {
 		tlsConfig.CipherSuites = gmtls.DefaultCipherSuites
 		//set the host name override
 		tlsConfig.ServerName = serverName
+		tlsConfig.InsecureSkipVerify = true
 		tr.TLSClientConfig = tlsConfig
 	}
 	c.httpClient = &http.Client{Transport: tr}
